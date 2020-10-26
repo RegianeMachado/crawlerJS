@@ -1,3 +1,4 @@
+'use strict'
 const http = require('http');
 const MercadoLivre = require('./services/MercadoLivre');
 const Cache = require('./utils/cache')
@@ -14,7 +15,15 @@ const app = http.createServer(async (req, res) => {
         return res.end()
     }
 
-    const products = await MercadoLivre.getProductsByTerm(term);
+    const cacheProducts = Cache.getCache(term);
+
+    if(cacheProducts){
+        res.writeHead(200, {'Content-Type': 'application/json; charset=utf-8'});
+        res.write(cacheProducts)
+        return res.end()
+    }    
+    const products =  await MercadoLivre.getProductsByTerm(term);  
+
     
     if(products.error){
         res.writeHead(503, {'Content-Type': 'application/json; charset=utf-8'});
@@ -23,9 +32,11 @@ const app = http.createServer(async (req, res) => {
         return res.end()
     }
 
-    res.writeHead(200, {'Content-Type': 'application/json; charset=utf-8'});
+    Cache.setCache(term, JSON.stringify(products));
 
-    res.write(JSON.stringify(products))
+    res.writeHead(200, {'Content-Type': 'application/json; charset=utf-8'});    
+    res.write(JSON.stringify(products));
+    
     return res.end()
 
 })
